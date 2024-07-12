@@ -1,39 +1,26 @@
+use bytes::BytesMut;
+use enum_dispatch::enum_dispatch;
+
+pub use array::*;
+pub use bulk_string::*;
+pub use frame::*;
+pub use map::*;
+pub use null::*;
+pub use set::*;
+pub use simple_error::*;
+pub use simple_string::*;
+
 mod array;
 mod boolean;
 mod bulk_string;
 mod double;
-mod error;
+mod frame;
 mod integer;
 mod map;
 mod null;
-mod null_array;
-mod null_bulk_string;
 mod set;
+mod simple_error;
 mod simple_string;
-#[allow(unused_imports)]
-pub use array::*;
-#[allow(unused_imports)]
-pub use boolean::*;
-#[allow(unused_imports)]
-pub use bulk_string::*;
-#[allow(unused_imports)]
-pub use double::*;
-#[allow(unused_imports)]
-pub use error::*;
-#[allow(unused_imports)]
-pub use integer::*;
-#[allow(unused_imports)]
-pub use map::*;
-#[allow(unused_imports)]
-pub use null::*;
-#[allow(unused_imports)]
-pub use null_array::*;
-#[allow(unused_imports)]
-pub use null_bulk_string::*;
-#[allow(unused_imports)]
-pub use set::*;
-#[allow(unused_imports)]
-pub use simple_string::*;
 
 /*
 - 如何 serialize/deserialize Frame
@@ -58,12 +45,9 @@ pub use simple_string::*;
 - bytes trait
 */
 
-use std::collections::{HashMap, HashSet};
-use std::ops::Deref;
+const BUF_CAP: usize = 4096;
 
-use bytes::BytesMut;
-
-#[allow(dead_code)]
+#[enum_dispatch]
 pub trait RespEncode {
     //self 获取所有权, 如果你需要在方法内部完全消耗该对象
     //&self 借用所有权, 不需要修改调用者并且只需要读访问的方法
@@ -74,101 +58,4 @@ pub trait RespEncode {
 #[allow(dead_code)]
 pub trait RespDecode {
     fn decode(buf: BytesMut) -> anyhow::Result<RespFrame>;
-}
-
-#[allow(dead_code)]
-pub enum RespFrame {
-    SimpleString(TSimpleString),
-    Error(TError),
-    Integer(TInteger),
-    BulkString(TBulkString),
-    NullBulkString(TNullBulkString),
-    Array(Vec<RespFrame>),
-    Null(TNull),
-    NullArray(TNullArray),
-    Boolean(TBoolean),
-    Double(TDouble),
-    Map(TMap),
-    Set(TSet),
-}
-
-pub struct TSimpleString(String);
-
-pub struct TError(String);
-
-pub struct TInteger(i64);
-
-pub struct TBulkString(Vec<u8>);
-
-pub struct TNullBulkString;
-
-#[allow(dead_code)]
-pub struct TArray(Vec<RespFrame>);
-
-pub struct TNull;
-
-pub struct TNullArray;
-
-pub struct TBoolean(());
-
-pub struct TDouble(());
-
-pub struct TMap(HashMap<String, RespFrame>);
-
-pub struct TSet(HashSet<RespFrame>);
-
-impl Deref for TSimpleString {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TError {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TInteger {
-    type Target = i64;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TBulkString {
-    type Target = Vec<u8>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TArray {
-    type Target = Vec<RespFrame>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TMap {
-    type Target = HashMap<String, RespFrame>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TSet {
-    type Target = HashSet<RespFrame>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
 }
