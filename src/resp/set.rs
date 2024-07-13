@@ -8,7 +8,7 @@ use crate::resp::{
 };
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TSet(Vec<RespFrame>);
+pub struct TSet(pub(crate) Vec<RespFrame>);
 
 impl Deref for TSet {
     type Target = Vec<RespFrame>;

@@ -6,7 +6,7 @@ use bytes::{Buf, BytesMut};
 use crate::resp::{extract_fixed_data, parse_length, RespDecode, RespEncode, RespError, CRLF_LEN};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TBulkString(pub(crate) Vec<u8>);
+pub struct TBulkString(pub Vec<u8>);
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TNullBulkString;
@@ -22,6 +22,12 @@ impl Deref for TBulkString {
 impl TBulkString {
     pub fn new(data: impl Into<Vec<u8>>) -> Self {
         TBulkString(data.into())
+    }
+}
+
+impl AsRef<[u8]> for TBulkString {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 

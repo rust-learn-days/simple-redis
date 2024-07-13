@@ -3,13 +3,14 @@ use std::ops::Deref;
 use anyhow::Result;
 use bytes::{Buf, BytesMut};
 
+use crate::resp::RespDecode;
 use crate::resp::{
-    calc_total_length, extract_fixed_data, parse_length, RespDecode, RespEncode, RespError,
-    RespFrame, BUF_CAP, CRLF_LEN,
+    calc_total_length, extract_fixed_data, parse_length, RespEncode, RespError, RespFrame, BUF_CAP,
+    CRLF_LEN,
 };
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TArray(Vec<RespFrame>);
+pub struct TArray(pub Vec<RespFrame>);
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TNullArray;
@@ -84,6 +85,12 @@ impl RespDecode for TNullArray {
 
     fn expect_length(_buf: &[u8]) -> Result<usize, RespError> {
         Ok(4)
+    }
+}
+
+impl From<Vec<RespFrame>> for TArray {
+    fn from(s: Vec<RespFrame>) -> Self {
+        TArray(s)
     }
 }
 

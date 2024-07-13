@@ -6,7 +6,7 @@ use bytes::BytesMut;
 use crate::resp::{extract_simple_frame_data, RespDecode, RespEncode, RespError, CRLF_LEN};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TError(String);
+pub struct TError(pub(crate) String);
 
 impl Deref for TError {
     type Target = String;
