@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::resp::{RespEncode, RespFrame};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TSet(Vec<RespFrame>);
 
 impl Deref for TSet {

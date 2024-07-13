@@ -2,10 +2,10 @@ use std::ops::Deref;
 
 use crate::resp::{RespEncode, RespFrame, BUF_CAP};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TArray(Vec<RespFrame>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TNullArray;
 
 impl Deref for TArray {

@@ -1,11 +1,14 @@
 use std::ops::Deref;
 
-use crate::resp::RespEncode;
+use anyhow::Result;
+use bytes::BytesMut;
 
-#[derive(Debug, Clone)]
+use crate::resp::{extract_fixed_data, RespDecode, RespEncode, RespError};
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TBulkString(Vec<u8>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TNullBulkString;
 
 impl Deref for TBulkString {
@@ -40,6 +43,15 @@ impl RespEncode for TNullBulkString {
     }
 }
 
+impl RespDecode for TNullBulkString {
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
+        match extract_fixed_data(buf, "$-1\r\n", "TNullBulkString") {
+            Ok(_) => Ok(TNullBulkString),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::resp::RespFrame;
@@ -56,5 +68,16 @@ mod tests {
     fn test_null_bulk_string_encode() {
         let frame: RespFrame = TNullBulkString.into();
         assert_eq!(frame.encode(), b"$-1\r\n");
+    }
+
+    #[test]
+    fn test_null_bulk_string_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"$-1\r\n");
+
+        let frame = TNullBulkString::decode(&mut buf)?;
+        assert_eq!(frame, TNullBulkString);
+
+        Ok(())
     }
 }

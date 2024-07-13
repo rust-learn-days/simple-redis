@@ -1,5 +1,7 @@
-use bytes::BytesMut;
+use anyhow::Result;
+use bytes::{Buf, BytesMut};
 use enum_dispatch::enum_dispatch;
+use thiserror::Error;
 
 pub use array::*;
 pub use bulk_string::*;
@@ -47,6 +49,19 @@ mod simple_string;
 
 const BUF_CAP: usize = 4096;
 
+#[allow(dead_code)]
+#[derive(Error, Debug)]
+pub enum RespError {
+    #[error("Invalid frame type: {0}")]
+    InvalidFrameType(String),
+    #[error("Invalid frame length: {0}")]
+    InvalidFrameLength(isize),
+    #[error("Invalid frame data: {0}")]
+    InvalidFrameData(String),
+    #[error("Frame is not complete")]
+    NotCompleteFrame,
+}
+
 #[enum_dispatch]
 pub trait RespEncode {
     //self 获取所有权, 如果你需要在方法内部完全消耗该对象
@@ -56,6 +71,30 @@ pub trait RespEncode {
 }
 
 #[allow(dead_code)]
-pub trait RespDecode {
-    fn decode(buf: BytesMut) -> anyhow::Result<RespFrame>;
+pub trait RespDecode: Sized {
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError>;
+}
+
+fn extract_fixed_data(
+    buf: &mut BytesMut,
+    expect: &str,
+    expect_type: &str,
+) -> Result<(), RespError> {
+    if buf.len() < expect.len() {
+        return Err(RespError::InvalidFrameData(format!(
+            "expect: {}, got: {}",
+            expect.len(),
+            buf.len()
+        )));
+    }
+
+    if !buf.starts_with(expect.as_bytes()) {
+        return Err(RespError::InvalidFrameData(format!(
+            "expect: {}, got: {:?}",
+            expect_type, buf
+        )));
+    }
+
+    buf.advance(expect.len());
+    Ok(())
 }

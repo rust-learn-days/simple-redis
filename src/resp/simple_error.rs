@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::resp::RespEncode;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TError(String);
 
 impl Deref for TError {

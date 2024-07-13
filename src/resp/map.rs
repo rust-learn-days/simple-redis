@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::resp::{RespEncode, RespFrame, TSimpleString, BUF_CAP};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TMap(BTreeMap<String, RespFrame>);
 
 impl Deref for TMap {

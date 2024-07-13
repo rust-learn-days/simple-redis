@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 use crate::resp::RespEncode;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TSimpleString(String);
 
 impl RespEncode for TSimpleString {
