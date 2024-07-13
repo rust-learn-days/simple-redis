@@ -1,4 +1,6 @@
-use crate::resp::RespEncode;
+use bytes::BytesMut;
+
+use crate::resp::{extract_simple_frame_data, RespDecode, RespEncode, RespError, CRLF_LEN};
 
 // - double: ",[<+|->]<integral>[.<fractional>][<E|e>[sign]<exponent>]\r\n"
 impl RespEncode for f64 {
@@ -12,6 +14,22 @@ impl RespEncode for f64 {
         };
         buf.extend_from_slice(ret.as_bytes());
         buf
+    }
+}
+
+impl RespDecode for f64 {
+    const PREFIX: &'static str = ",";
+
+    fn decode(buf: &mut BytesMut) -> anyhow::Result<Self, RespError> {
+        let end = extract_simple_frame_data(buf, Self::PREFIX)?;
+        let data = buf.split_to(end + CRLF_LEN);
+        let s = String::from_utf8_lossy(&data[Self::PREFIX.len()..end]);
+        Ok(s.parse()?)
+    }
+
+    fn expect_length(buf: &[u8]) -> anyhow::Result<usize, RespError> {
+        let end = extract_simple_frame_data(buf, Self::PREFIX)?;
+        Ok(end + CRLF_LEN)
     }
 }
 

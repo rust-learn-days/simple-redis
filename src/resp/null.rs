@@ -14,11 +14,17 @@ impl RespEncode for TNull {
 }
 
 impl RespDecode for TNull {
+    const PREFIX: &'static str = "_";
+
     fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
         match extract_fixed_data(buf, "_\r\n", "TNull") {
             Ok(_) => Ok(TNull),
             Err(e) => Err(e),
         }
+    }
+
+    fn expect_length(_buf: &[u8]) -> Result<usize, RespError> {
+        Ok(3)
     }
 }
 

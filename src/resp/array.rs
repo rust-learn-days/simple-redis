@@ -1,6 +1,12 @@
 use std::ops::Deref;
 
-use crate::resp::{RespEncode, RespFrame, BUF_CAP};
+use anyhow::Result;
+use bytes::{Buf, BytesMut};
+
+use crate::resp::{
+    calc_total_length, extract_fixed_data, parse_length, RespDecode, RespEncode, RespError,
+    RespFrame, BUF_CAP, CRLF_LEN,
+};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TArray(Vec<RespFrame>);
@@ -34,6 +40,33 @@ impl RespEncode for TArray {
     }
 }
 
+impl RespDecode for TArray {
+    const PREFIX: &'static str = "*";
+
+    fn decode(buf: &mut BytesMut) -> anyhow::Result<Self, RespError> {
+        let (end, len) = parse_length(buf, Self::PREFIX)?;
+        let total_len = calc_total_length(buf, end, len, Self::PREFIX)?;
+
+        if buf.len() < total_len {
+            return Err(RespError::NotCompleteFrame);
+        }
+
+        buf.advance(end + CRLF_LEN);
+
+        let mut frames = Vec::with_capacity(len);
+        for _ in 0..len {
+            frames.push(RespFrame::decode(buf)?);
+        }
+
+        Ok(TArray::new(frames))
+    }
+
+    fn expect_length(buf: &[u8]) -> anyhow::Result<usize, RespError> {
+        let (end, len) = parse_length(buf, Self::PREFIX)?;
+        calc_total_length(buf, end, len, Self::PREFIX)
+    }
+}
+
 // - null array: "*-1\r\n"
 impl RespEncode for TNullArray {
     fn encode(self) -> Vec<u8> {
@@ -41,10 +74,24 @@ impl RespEncode for TNullArray {
     }
 }
 
+impl RespDecode for TNullArray {
+    const PREFIX: &'static str = "*";
+
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
+        extract_fixed_data(buf, "*-1\r\n", "NullArray")?;
+        Ok(TNullArray)
+    }
+
+    fn expect_length(_buf: &[u8]) -> Result<usize, RespError> {
+        Ok(4)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::resp::TBulkString;
+
+    use super::*;
 
     #[test]
     fn test_array_encode() {

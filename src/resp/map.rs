@@ -1,10 +1,16 @@
 use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 
-use crate::resp::{RespEncode, RespFrame, TSimpleString, BUF_CAP};
+use anyhow::Result;
+use bytes::{Buf, BytesMut};
+
+use crate::resp::{
+    calc_total_length, parse_length, RespDecode, RespEncode, RespError, RespFrame, TSimpleString,
+    BUF_CAP, CRLF_LEN,
+};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TMap(BTreeMap<String, RespFrame>);
+pub struct TMap(pub(crate) BTreeMap<String, RespFrame>);
 
 impl Deref for TMap {
     type Target = BTreeMap<String, RespFrame>;
@@ -30,6 +36,35 @@ impl RespEncode for TMap {
             buf.extend_from_slice(&value.encode());
         }
         buf
+    }
+}
+
+impl RespDecode for TMap {
+    const PREFIX: &'static str = "%";
+
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
+        let (end, len) = parse_length(buf, Self::PREFIX)?;
+        let total_len = calc_total_length(buf, end, len, Self::PREFIX)?;
+
+        if buf.len() < total_len {
+            return Err(RespError::NotCompleteFrame);
+        }
+
+        buf.advance(end + CRLF_LEN);
+
+        let mut frames = TMap::new();
+        for _ in 0..len {
+            let key = TSimpleString::decode(buf)?;
+            let value = RespFrame::decode(buf)?;
+            frames.insert(key.0, value);
+        }
+
+        Ok(frames)
+    }
+
+    fn expect_length(buf: &[u8]) -> Result<usize, RespError> {
+        let (end, len) = parse_length(buf, Self::PREFIX)?;
+        calc_total_length(buf, end, len, Self::PREFIX)
     }
 }
 
