@@ -52,7 +52,7 @@ const CRLF: &[u8] = b"\r\n";
 const CRLF_LEN: usize = CRLF.len();
 
 #[allow(dead_code)]
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum RespError {
     #[error("Invalid frame type: {0}")]
     InvalidFrameType(String),

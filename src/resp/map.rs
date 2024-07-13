@@ -95,4 +95,21 @@ mod tests {
             b"%2\r\n+foo\r\n,-123456.789\r\n+hello\r\n$5\r\nworld\r\n"
         );
     }
+
+    #[test]
+    fn test_map_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"%2\r\n+hello\r\n$5\r\nworld\r\n+foo\r\n$3\r\nbar\r\n");
+
+        let frame = TMap::decode(&mut buf)?;
+        let mut map = TMap::new();
+        map.insert(
+            "hello".to_string(),
+            TBulkString::new(b"world".to_vec()).into(),
+        );
+        map.insert("foo".to_string(), TBulkString::new(b"bar".to_vec()).into());
+        assert_eq!(frame, map);
+
+        Ok(())
+    }
 }

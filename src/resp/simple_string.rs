@@ -16,7 +16,7 @@ impl RespEncode for TSimpleString {
 }
 
 impl RespDecode for TSimpleString {
-    const PREFIX: &'static str = "~";
+    const PREFIX: &'static str = "+";
 
     fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
         let end = extract_simple_frame_data(buf, Self::PREFIX)?;
@@ -40,6 +40,18 @@ impl Deref for TSimpleString {
     }
 }
 
+impl From<&str> for TSimpleString {
+    fn from(s: &str) -> Self {
+        TSimpleString(s.to_string())
+    }
+}
+
+impl AsRef<str> for TSimpleString {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl TSimpleString {
     pub fn new(data: impl Into<String>) -> Self {
         TSimpleString(data.into())
@@ -48,6 +60,8 @@ impl TSimpleString {
 
 #[cfg(test)]
 mod tests {
+    use bytes::BufMut;
+
     use crate::resp::RespFrame;
 
     use super::*;
@@ -57,5 +71,25 @@ mod tests {
         let frame: RespFrame = TSimpleString::new("OK".to_string()).into();
 
         assert_eq!(frame.encode(), b"+OK\r\n");
+    }
+
+    #[test]
+    fn test_simple_string_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"+OK\r\n");
+
+        let frame = TSimpleString::decode(&mut buf)?;
+        assert_eq!(frame, TSimpleString::new("OK".to_string()));
+
+        buf.extend_from_slice(b"+hello\r");
+
+        let ret = TSimpleString::decode(&mut buf);
+        assert_eq!(ret.unwrap_err(), RespError::NotCompleteFrame);
+
+        buf.put_u8(b'\n');
+        let frame = TSimpleString::decode(&mut buf)?;
+        assert_eq!(frame, TSimpleString::new("hello".to_string()));
+
+        Ok(())
     }
 }

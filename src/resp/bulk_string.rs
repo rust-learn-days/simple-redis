@@ -25,6 +25,30 @@ impl TBulkString {
     }
 }
 
+impl From<&str> for TBulkString {
+    fn from(s: &str) -> Self {
+        TBulkString(s.as_bytes().to_vec())
+    }
+}
+
+impl From<String> for TBulkString {
+    fn from(s: String) -> Self {
+        TBulkString(s.into_bytes())
+    }
+}
+
+impl From<&[u8]> for TBulkString {
+    fn from(s: &[u8]) -> Self {
+        TBulkString(s.to_vec())
+    }
+}
+
+impl<const N: usize> From<&[u8; N]> for TBulkString {
+    fn from(s: &[u8; N]) -> Self {
+        TBulkString(s.to_vec())
+    }
+}
+
 // - bulk string: "$<length>\r\n<data>\r\n"
 impl RespEncode for TBulkString {
     fn encode(self) -> Vec<u8> {
@@ -96,6 +120,25 @@ mod tests {
     fn test_null_bulk_string_encode() {
         let frame: RespFrame = TNullBulkString.into();
         assert_eq!(frame.encode(), b"$-1\r\n");
+    }
+
+    #[test]
+    fn test_bulk_string_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"$5\r\nhello\r\n");
+
+        let frame = TBulkString::decode(&mut buf)?;
+        assert_eq!(frame, TBulkString::new(b"hello"));
+
+        buf.extend_from_slice(b"$5\r\nhello");
+        let ret = TBulkString::decode(&mut buf);
+        assert_eq!(ret.unwrap_err(), RespError::NotCompleteFrame);
+
+        buf.extend_from_slice(b"\r\n");
+        let frame = TBulkString::decode(&mut buf)?;
+        assert_eq!(frame, TBulkString::new(b"hello"));
+
+        Ok(())
     }
 
     #[test]

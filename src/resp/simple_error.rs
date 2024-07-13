@@ -24,7 +24,7 @@ impl RespEncode for TError {
 }
 
 impl RespDecode for TError {
-    const PREFIX: &'static str = "~";
+    const PREFIX: &'static str = "-";
 
     fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
         let end = extract_simple_frame_data(buf, Self::PREFIX)?;
@@ -57,5 +57,16 @@ mod tests {
         let frame: RespFrame = TError::new("Error message".to_string()).into();
 
         assert_eq!(frame.encode(), b"-Error message\r\n");
+    }
+
+    #[test]
+    fn test_simple_error_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"-Error message\r\n");
+
+        let frame = TError::decode(&mut buf)?;
+        assert_eq!(frame, TError::new("Error message".to_string()));
+
+        Ok(())
     }
 }

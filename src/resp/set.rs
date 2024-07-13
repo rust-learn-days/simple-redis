@@ -82,4 +82,20 @@ mod tests {
             b"~2\r\n*2\r\n:+1234\r\n#t\r\n$5\r\nworld\r\n"
         );
     }
+    #[test]
+    fn test_set_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"~2\r\n$3\r\nset\r\n$5\r\nhello\r\n");
+
+        let frame = TSet::decode(&mut buf)?;
+        assert_eq!(
+            frame,
+            TSet::new(vec![
+                TBulkString::new(b"set".to_vec()).into(),
+                TBulkString::new(b"hello".to_vec()).into()
+            ])
+        );
+
+        Ok(())
+    }
 }

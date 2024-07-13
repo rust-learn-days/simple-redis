@@ -1,3 +1,4 @@
+use anyhow::Result;
 use bytes::BytesMut;
 
 use crate::resp::{extract_simple_frame_data, RespDecode, RespEncode, RespError, CRLF_LEN};
@@ -20,14 +21,14 @@ impl RespEncode for f64 {
 impl RespDecode for f64 {
     const PREFIX: &'static str = ",";
 
-    fn decode(buf: &mut BytesMut) -> anyhow::Result<Self, RespError> {
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
         let end = extract_simple_frame_data(buf, Self::PREFIX)?;
         let data = buf.split_to(end + CRLF_LEN);
         let s = String::from_utf8_lossy(&data[Self::PREFIX.len()..end]);
         Ok(s.parse()?)
     }
 
-    fn expect_length(buf: &[u8]) -> anyhow::Result<usize, RespError> {
+    fn expect_length(buf: &[u8]) -> Result<usize, RespError> {
         let end = extract_simple_frame_data(buf, Self::PREFIX)?;
         Ok(end + CRLF_LEN)
     }
@@ -35,7 +36,9 @@ impl RespDecode for f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::resp::{RespEncode, RespFrame};
+    use bytes::BytesMut;
+
+    use crate::resp::{RespDecode, RespEncode, RespFrame};
 
     #[test]
     fn test_double_encode() {
@@ -50,5 +53,20 @@ mod tests {
 
         let frame: RespFrame = (-1.23456e-9).into();
         assert_eq!(&frame.encode(), b",-1.23456e-9\r\n");
+    }
+
+    #[test]
+    fn test_double_decode() -> anyhow::Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b",123.45\r\n");
+
+        let frame = f64::decode(&mut buf)?;
+        assert_eq!(frame, 123.45);
+
+        buf.extend_from_slice(b",+1.23456e-9\r\n");
+        let frame = f64::decode(&mut buf)?;
+        assert_eq!(frame, 1.23456e-9);
+
+        Ok(())
     }
 }

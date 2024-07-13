@@ -42,4 +42,20 @@ mod tests {
         let frame: RespFrame = (-123).into();
         assert_eq!(frame.encode(), b":-123\r\n");
     }
+
+    #[test]
+    fn test_integer_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b":+123\r\n");
+
+        let frame = i64::decode(&mut buf)?;
+        assert_eq!(frame, 123);
+
+        buf.extend_from_slice(b":-123\r\n");
+
+        let frame = i64::decode(&mut buf)?;
+        assert_eq!(frame, -123);
+
+        Ok(())
+    }
 }

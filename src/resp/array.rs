@@ -112,4 +112,34 @@ mod tests {
         let frame: RespFrame = TNullArray.into();
         assert_eq!(frame.encode(), b"*-1\r\n");
     }
+
+    #[test]
+    fn test_null_array_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"*-1\r\n");
+
+        let frame = TNullArray::decode(&mut buf)?;
+        assert_eq!(frame, TNullArray);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_decode() -> Result<()> {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(b"*2\r\n$3\r\nset\r\n$5\r\nhello\r\n");
+
+        let frame = TArray::decode(&mut buf)?;
+        assert_eq!(frame, TArray::new([b"set".into(), b"hello".into()]));
+
+        buf.extend_from_slice(b"*2\r\n$3\r\nset\r\n");
+        let ret = TArray::decode(&mut buf);
+        assert_eq!(ret.unwrap_err(), RespError::NotCompleteFrame);
+
+        buf.extend_from_slice(b"$5\r\nhello\r\n");
+        let frame = TArray::decode(&mut buf)?;
+        assert_eq!(frame, TArray::new([b"set".into(), b"hello".into()]));
+
+        Ok(())
+    }
 }
