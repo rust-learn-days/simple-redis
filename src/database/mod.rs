@@ -5,6 +5,7 @@ use dashmap::DashMap;
 
 use crate::resp::RespFrame;
 
+#[derive(Debug, Clone)]
 pub struct Database(Arc<Backend>);
 
 #[derive(Debug)]

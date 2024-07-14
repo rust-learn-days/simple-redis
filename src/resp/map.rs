@@ -68,6 +68,12 @@ impl RespDecode for TMap {
     }
 }
 
+impl Default for TMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TMap {
     pub fn new() -> Self {
         TMap(BTreeMap::new())
