@@ -9,12 +9,15 @@ mod echo;
 mod hmap;
 mod map;
 mod mget;
+mod set;
 mod unrecognized;
 
 lazy_static! {
     static ref RESP_OK: RespFrame = TSimpleString::new("OK").into();
     static ref RESP_UNKNOW: RespFrame = TSimpleString::new("UNKNOWN").into();
     static ref RESP_NULL: RespFrame = TNull.into();
+    static ref RESP_ZERO: RespFrame = 0.into();
+    static ref RESP_ONE: RespFrame = 1.into();
 }
 
 #[derive(Error, Debug)]
@@ -44,6 +47,8 @@ pub enum Command {
     HGetAll(HGetAllArgs),
     Echo(EchoArgs),
     HMGet(HMGetArgs),
+    SAdd(SAddArgs),
+    Sismember(SismemberArgs),
     Unrecognized(UnrecognizedArgs),
 }
 
@@ -89,6 +94,18 @@ pub struct EchoArgs {
 }
 
 #[derive(Debug)]
+pub struct SAddArgs {
+    key: String,
+    val: String,
+}
+
+#[derive(Debug)]
+pub struct SismemberArgs {
+    key: String,
+    val: String,
+}
+
+#[derive(Debug)]
 pub struct UnrecognizedArgs {}
 
 impl TryFrom<RespFrame> for Command {
@@ -115,6 +132,8 @@ impl TryFrom<TArray> for Command {
                 b"hgetall" => Ok(HGetAllArgs::try_from(v)?.into()),
                 b"echo" => Ok(EchoArgs::try_from(v)?.into()),
                 b"hmget" => Ok(HMGetArgs::try_from(v)?.into()),
+                b"sadd" => Ok(SAddArgs::try_from(v)?.into()),
+                b"sismember" => Ok(SismemberArgs::try_from(v)?.into()),
                 _ => Ok(UnrecognizedArgs {}.into()),
             },
             _ => Err(CommandError::InvalidCommand(

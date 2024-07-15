@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 
 use crate::resp::RespFrame;
 
@@ -12,6 +12,7 @@ pub struct Database(Arc<Backend>);
 pub struct Backend {
     pub(crate) map: DashMap<String, RespFrame>,
     pub(crate) hmap: DashMap<String, DashMap<String, RespFrame>>,
+    pub(crate) hset: DashMap<String, DashSet<String>>,
 }
 
 impl Deref for Database {
@@ -33,6 +34,7 @@ impl Default for Backend {
         Self {
             map: DashMap::new(),
             hmap: DashMap::new(),
+            hset: DashMap::new(),
         }
     }
 }
@@ -63,5 +65,14 @@ impl Database {
 
     pub fn hgetall(&self, key: &str) -> Option<DashMap<String, RespFrame>> {
         self.hmap.get(key).map(|v| v.clone())
+    }
+
+    pub fn sadd(&self, key: String, val: String) {
+        let hdata = self.hset.entry(key).or_default();
+        hdata.insert(val);
+    }
+
+    pub fn sall(&self, key: &str) -> Option<DashSet<String>> {
+        self.hset.get(key).map(|v| v.clone())
     }
 }

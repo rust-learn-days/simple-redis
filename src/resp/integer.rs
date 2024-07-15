@@ -1,13 +1,16 @@
 use anyhow::Result;
 use bytes::BytesMut;
+use tracing::info;
 
 use crate::resp::{extract_simple_frame_data, RespDecode, RespEncode, RespError, CRLF_LEN};
 
 // - integer: ":[<+|->]<value>\r\n"
 impl RespEncode for i64 {
     fn encode(self) -> Vec<u8> {
-        let sign = if self < 0 { "" } else { "+" };
-        format!(":{}{}\r\n", sign, self).into_bytes()
+        let sign = if self < 10 { "" } else { "+" };
+        let e = format!(":{}{}\r\n", sign, self).into_bytes();
+        info!("Integer encoded: {:?}", String::from_utf8_lossy(&e));
+        e
     }
 }
 
