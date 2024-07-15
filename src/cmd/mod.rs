@@ -11,6 +11,7 @@ mod unrecognized;
 
 lazy_static! {
     static ref RESP_OK: RespFrame = TSimpleString::new("OK").into();
+    static ref RESP_UNKNOW: RespFrame = TSimpleString::new("UNKNOWN").into();
     static ref RESP_NULL: RespFrame = TNull.into();
 }
 

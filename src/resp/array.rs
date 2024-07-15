@@ -12,9 +12,6 @@ use crate::resp::{
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TArray(pub Vec<RespFrame>);
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TNullArray;
-
 impl Deref for TArray {
     type Target = Vec<RespFrame>;
 
@@ -32,6 +29,9 @@ impl TArray {
 // - array: "*<number-of-elements>\r\n<element-1>...<element-n>"
 impl RespEncode for TArray {
     fn encode(self) -> Vec<u8> {
+        if self.is_empty() {
+            return "*-1\r\n".to_string().into_bytes();
+        }
         let mut buf = Vec::with_capacity(BUF_CAP);
         buf.extend_from_slice(&format!("*{}\r\n", self.0.len()).into_bytes());
         for frame in self.0 {
@@ -44,7 +44,10 @@ impl RespEncode for TArray {
 impl RespDecode for TArray {
     const PREFIX: &'static str = "*";
 
-    fn decode(buf: &mut BytesMut) -> anyhow::Result<Self, RespError> {
+    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
+        if extract_fixed_data(buf, "*-1\r\n", "TArray").is_ok() {
+            return Ok(TArray::new(Vec::new()));
+        }
         let (end, len) = parse_length(buf, Self::PREFIX)?;
         let total_len = calc_total_length(buf, end, len, Self::PREFIX)?;
 
@@ -62,29 +65,9 @@ impl RespDecode for TArray {
         Ok(TArray::new(frames))
     }
 
-    fn expect_length(buf: &[u8]) -> anyhow::Result<usize, RespError> {
+    fn expect_length(buf: &[u8]) -> Result<usize, RespError> {
         let (end, len) = parse_length(buf, Self::PREFIX)?;
         calc_total_length(buf, end, len, Self::PREFIX)
-    }
-}
-
-// - null array: "*-1\r\n"
-impl RespEncode for TNullArray {
-    fn encode(self) -> Vec<u8> {
-        "*-1\r\n".to_string().into_bytes()
-    }
-}
-
-impl RespDecode for TNullArray {
-    const PREFIX: &'static str = "*";
-
-    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
-        extract_fixed_data(buf, "*-1\r\n", "NullArray")?;
-        Ok(TNullArray)
-    }
-
-    fn expect_length(_buf: &[u8]) -> Result<usize, RespError> {
-        Ok(4)
     }
 }
 
@@ -116,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_null_array_encode() {
-        let frame: RespFrame = TNullArray.into();
+        let frame: RespFrame = TArray::new(Vec::new()).into();
         assert_eq!(frame.encode(), b"*-1\r\n");
     }
 
@@ -125,8 +108,10 @@ mod tests {
         let mut buf = BytesMut::new();
         buf.extend_from_slice(b"*-1\r\n");
 
-        let frame = TNullArray::decode(&mut buf)?;
-        assert_eq!(frame, TNullArray);
+        let frame = TArray::decode(&mut buf)?;
+        let null_array = TArray::new(Vec::new());
+
+        assert_eq!(frame, null_array);
 
         Ok(())
     }

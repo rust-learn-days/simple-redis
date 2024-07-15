@@ -2,8 +2,7 @@ use bytes::BytesMut;
 use enum_dispatch::enum_dispatch;
 
 use crate::resp::{
-    RespDecode, RespError, TArray, TBulkString, TError, TMap, TNull, TNullArray, TSet,
-    TSimpleString,
+    RespDecode, RespError, TArray, TBulkString, TError, TMap, TNull, TSet, TSimpleString,
 };
 
 #[enum_dispatch(RespEncode)]
@@ -15,7 +14,6 @@ pub enum RespFrame {
     BulkString(TBulkString),
     Array(TArray),
     Null(TNull),
-    NullArray(TNullArray),
     Boolean(bool),
     Double(f64),
     Map(TMap),
@@ -48,13 +46,9 @@ impl RespDecode for RespFrame {
             }
             Some(b'*') => {
                 // try null array first
-                match TNullArray::decode(buf) {
+                match TArray::decode(buf) {
                     Ok(frame) => Ok(frame.into()),
-                    Err(RespError::NotCompleteFrame) => Err(RespError::NotCompleteFrame),
-                    Err(_) => {
-                        let frame = TArray::decode(buf)?;
-                        Ok(frame.into())
-                    }
+                    Err(e) => Err(e),
                 }
             }
             Some(b'_') => {
