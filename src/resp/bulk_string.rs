@@ -8,9 +8,6 @@ use crate::resp::{extract_fixed_data, parse_length, RespDecode, RespEncode, Resp
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TBulkString(pub Vec<u8>);
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct TNullBulkString;
-
 impl Deref for TBulkString {
     type Target = Vec<u8>;
 
@@ -58,6 +55,9 @@ impl<const N: usize> From<&[u8; N]> for TBulkString {
 // - bulk string: "$<length>\r\n<data>\r\n"
 impl RespEncode for TBulkString {
     fn encode(self) -> Vec<u8> {
+        if self.is_empty() {
+            return b"$-1\r\n".to_vec();
+        }
         let mut buf = Vec::with_capacity(self.len() + 16);
         buf.extend_from_slice(format!("${}\r\n", self.len()).as_bytes());
         buf.extend_from_slice(&self);
@@ -70,6 +70,9 @@ impl RespDecode for TBulkString {
     const PREFIX: &'static str = "$";
 
     fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
+        if extract_fixed_data(buf, "$-1\r\n", "TBulkString").is_ok() {
+            return Ok(TBulkString::new(Vec::new()));
+        }
         let (end, len) = parse_length(buf, Self::PREFIX)?;
         let remained = &buf[end + CRLF_LEN..];
         if remained.len() < len + CRLF_LEN {
@@ -88,28 +91,6 @@ impl RespDecode for TBulkString {
     }
 }
 
-// - null bulk string: "$-1\r\n"
-impl RespEncode for TNullBulkString {
-    fn encode(self) -> Vec<u8> {
-        b"$-1\r\n".to_vec()
-    }
-}
-
-impl RespDecode for TNullBulkString {
-    const PREFIX: &'static str = "$";
-
-    fn decode(buf: &mut BytesMut) -> Result<Self, RespError> {
-        match extract_fixed_data(buf, "$-1\r\n", "TNullBulkString") {
-            Ok(_) => Ok(TNullBulkString),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn expect_length(_buf: &[u8]) -> Result<usize, RespError> {
-        Ok(5)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::resp::RespFrame;
@@ -124,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_null_bulk_string_encode() {
-        let frame: RespFrame = TNullBulkString.into();
+        let frame: RespFrame = TBulkString::new(Vec::new()).into();
         assert_eq!(frame.encode(), b"$-1\r\n");
     }
 
@@ -152,8 +133,9 @@ mod tests {
         let mut buf = BytesMut::new();
         buf.extend_from_slice(b"$-1\r\n");
 
-        let frame = TNullBulkString::decode(&mut buf)?;
-        assert_eq!(frame, TNullBulkString);
+        let frame = TBulkString::decode(&mut buf)?;
+        let null_bulk_string = TBulkString::new(Vec::new());
+        assert_eq!(frame, null_bulk_string);
 
         Ok(())
     }
