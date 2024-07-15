@@ -8,6 +8,7 @@ use crate::resp::{RespError, RespFrame, TArray, TNull, TSimpleString};
 mod echo;
 mod hmap;
 mod map;
+mod mget;
 mod unrecognized;
 
 lazy_static! {
@@ -42,6 +43,7 @@ pub enum Command {
     HSet(HSetArgs),
     HGetAll(HGetAllArgs),
     Echo(EchoArgs),
+    HMGet(HMGetArgs),
     Unrecognized(UnrecognizedArgs),
 }
 
@@ -67,6 +69,12 @@ pub struct HSetArgs {
     key: String,
     field: String,
     value: RespFrame,
+}
+
+#[derive(Debug)]
+pub struct HMGetArgs {
+    key: String,
+    field: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -106,6 +114,7 @@ impl TryFrom<TArray> for Command {
                 b"hset" => Ok(HSetArgs::try_from(v)?.into()),
                 b"hgetall" => Ok(HGetAllArgs::try_from(v)?.into()),
                 b"echo" => Ok(EchoArgs::try_from(v)?.into()),
+                b"hmget" => Ok(HMGetArgs::try_from(v)?.into()),
                 _ => Ok(UnrecognizedArgs {}.into()),
             },
             _ => Err(CommandError::InvalidCommand(
@@ -127,7 +136,6 @@ fn validate_command(
             n_args
         )));
     }
-
     for (i, name) in names.iter().enumerate() {
         match value[i] {
             RespFrame::BulkString(ref cmd) => {
