@@ -5,6 +5,7 @@ use thiserror::Error;
 use crate::database::Database;
 use crate::resp::{RespError, RespFrame, TArray, TNull, TSimpleString};
 
+mod echo;
 mod hmap;
 mod map;
 mod unrecognized;
@@ -40,7 +41,7 @@ pub enum Command {
     HGet(HGetArgs),
     HSet(HSetArgs),
     HGetAll(HGetAllArgs),
-
+    Echo(EchoArgs),
     Unrecognized(UnrecognizedArgs),
 }
 
@@ -75,6 +76,11 @@ pub struct HGetAllArgs {
 }
 
 #[derive(Debug)]
+pub struct EchoArgs {
+    val: String,
+}
+
+#[derive(Debug)]
 pub struct UnrecognizedArgs {}
 
 impl TryFrom<RespFrame> for Command {
@@ -99,6 +105,7 @@ impl TryFrom<TArray> for Command {
                 b"hget" => Ok(HGetArgs::try_from(v)?.into()),
                 b"hset" => Ok(HSetArgs::try_from(v)?.into()),
                 b"hgetall" => Ok(HGetAllArgs::try_from(v)?.into()),
+                b"echo" => Ok(EchoArgs::try_from(v)?.into()),
                 _ => Ok(UnrecognizedArgs {}.into()),
             },
             _ => Err(CommandError::InvalidCommand(
