@@ -7,8 +7,7 @@ use crate::resp::{extract_simple_frame_data, RespDecode, RespEncode, RespError, 
 // - integer: ":[<+|->]<value>\r\n"
 impl RespEncode for i64 {
     fn encode(self) -> Vec<u8> {
-        let sign = if self < 10 { "" } else { "+" };
-        let e = format!(":{}{}\r\n", sign, self).into_bytes();
+        let e = format!(":{}\r\n", self).into_bytes();
         info!("Integer encoded: {:?}", String::from_utf8_lossy(&e));
         e
     }
@@ -40,7 +39,7 @@ mod tests {
     #[test]
     fn test_integer_encode() {
         let frame: RespFrame = 123.into();
-        assert_eq!(frame.encode(), b":+123\r\n");
+        assert_eq!(frame.encode(), b":123\r\n");
 
         let frame: RespFrame = (-123).into();
         assert_eq!(frame.encode(), b":-123\r\n");
@@ -49,7 +48,7 @@ mod tests {
     #[test]
     fn test_integer_decode() -> Result<()> {
         let mut buf = BytesMut::new();
-        buf.extend_from_slice(b":+123\r\n");
+        buf.extend_from_slice(b":123\r\n");
 
         let frame = i64::decode(&mut buf)?;
         assert_eq!(frame, 123);
